@@ -4,7 +4,7 @@
 'use strict'
 var _ = require('lodash')
 var utils = require('./lib/Utility')
-var ob = require('./lib/Observables')
+var ob
 const {fromJS} = require('immutable')
 const {map, times, identity} = _
 const MAX_BUFFER = 512
@@ -43,8 +43,15 @@ function download (options) {
 
 class Download {
   constructor (options) {
+    if (ob === undefined) {
+      throw new Error('Need to set ob library!');
+    }
     this.options = _.defaults(options, defaultOptions)
     this.options.path += '.mtd'
+  }
+
+  static setOb (b) {
+    ob = require(b)
   }
 
   start () {
