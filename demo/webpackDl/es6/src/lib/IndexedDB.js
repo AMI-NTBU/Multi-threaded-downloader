@@ -25,26 +25,28 @@ let getObjectStore = (store_name, mode) => {
  * @param {string} fileName
  * @param {Blob=} blob
  */
-let addPublication = (fileName, blob) => {
-  console.log('addPublication arguments:', arguments);
-  let obj = { fileName: fileName };
+let addPublication = (db, fileName, blob, cb) => {
+  //console.log('addPublication arguments:', arguments);
+  let obj = { fileName: fileName, id: 0 };
   if (typeof blob != 'undefined')
     obj.blob = blob;
 
   let store = getObjectStore(DB_STORE_NAME, 'readwrite');
   let req;
   try {
-    req = store.add(obj);
+    req = store.put(obj);
   } catch (e) {
     if (e.name == 'DataCloneError')
       console.error("This engine doesn't know how to clone a Blob, use Firefox");
-    throw e;
+    return cb(e);
   }
   req.onsuccess = (evt) => {
     console.log('Insertion in DB successful');
+    cb(false, evt);
   };
   req.onerror = () => {
     console.error('addPublication error', this.error);
+    cb(err);
   };
 }
 
@@ -58,32 +60,62 @@ let requestBody = (params) => {
       .on('error', x => observer.onError(x))
   })
 }
-let requestHead = Rx.Observable.fromNodeCallback(request.head, null, _.identity)
-let fsOpen = () => {
+
+let requestHeadWrapped = (options, cb) => {
+  var x = 3;
+  console.dir(options);
+  //options.headers = {"Access-Control-Allow-Origin": "*"};
+
+  request.head(options, cb);
+}
+
+let requestHead = Rx.Observable.fromNodeCallback(requestHeadWrapped, null, _.identity)
+
+let fsOpen = (path, flags, ...rest) => {
+  let cb = rest[rest.length-1];
   console.log('openDb ...');
   let req = indexedDB.open(DB_NAME, DB_VERSION);
   req.onsuccess = (evt) => {
-    db = this.result;
+    db = evt.target.result;
     console.log('openDb DONE', db);
+    cb(false, {db: db, fileName: path});
   };
   req.onerror = (evt) => {
     console.error('openDb:', evt.target.errorCode);
+    cb(evt);
   };
   req.onupgradeneeded = (evt) => {
     console.log('openDb.onupgradeneeded');
     var store = evt.currentTarget.result.createObjectStore(
-      DB_STORE_NAME, { keyPath: 'id', autoIncrement : true });
+      DB_STORE_NAME, { keyPath: 'fileName', autoIncrement : false });
 
-    store.createIndex('fileName', 'fileName', { unique: false });
+    store.createIndex('blob', 'blob', { unique: false });
   };
 }
 
-// let fsWrite = () => {
-//   console.log('add ...');
+let fsWrite = (ctx, buffer, offset, length, position, cb) => {
+  let {db, fileName} = ctx;
+  console.log('add ...');
 
-//   // put sth here
-//   addPublication(fileName, blob);
-// }
+  // put sth here
+  addPublication(db, fileName, buffer, (err, evt) => {
+    cb(err, evt, ctx);
+  });
+}
+
+let fsRead = (db, path, cb) => {
+  let store = getObjectStore(DB_STORE_NAME, 'readwrite');
+  let req = store.get(path);
+  console.log("getting " + path);
+  req.onsuccess = (evt) => {
+    cb(false, evt.target.result, evt);
+  }
+
+  req.onerror = (evt) => {
+    cb(evt);
+  }
+
+}
 
 // let fsTruncate = () => {
 // }
@@ -96,8 +128,9 @@ supported();
 module.exports = {
   requestBody,
   requestHead,
-  fsOpen,
-  // fsWrite,
+  fsOpen: Rx.Observable.fromNodeCallback(fsOpen),
+  fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
   // fsTruncate,
   // fsRename
 }
+module.exports.fsRead = fsRead;

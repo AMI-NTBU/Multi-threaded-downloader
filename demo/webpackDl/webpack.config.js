@@ -5,8 +5,10 @@ module.exports = {
     entry: './es6/entry.js',
     output: {
         path: __dirname,
-        filename: 'bundle.js'
+        filename: 'bundle.js',
+        pathinfo: true
     },
+    debug: true,
     module: {
         loaders: [
             {
