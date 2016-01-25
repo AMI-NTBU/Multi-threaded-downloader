@@ -40,8 +40,8 @@ function singleThreadDownload(options) {
 
   return writableFile
     .zip(downloadedFile, (fd, buffer) => _.merge(options, {fd: fd, buffer: buffer}))
-    .do(ctx => {
-      ob.fsWrite(ctx.fd, ctx.buffer, 0, ctx.buffer.length, 0)
+    .flatMap(ctx => {
+      return ob.fsWrite(ctx.fd, ctx.buffer, 0, ctx.buffer.length, 0)
     });
 }
 
@@ -64,11 +64,11 @@ function download (options) {
     })
     .map(x => x.set('writtenPositions', writePositions))
     .flatMap(x => ob.fsWrite(x.get('fd'), x.get('buffer'), 0, x.get('buffer').length, x.get('writtenPositions').get(x.get('threadIndex')) - x.get('buffer').length), identity)
-  //   .map(x => x.set('metaBuffer', toBuffer(x.filter(utils.keyIn(['fd', 'url', 'writtenPositions', 'path', 'size', 'threads'])).toJS())))
-  //   .flatMap(x => ob.fsWrite(x.get('fd'), x.get('metaBuffer'), 0, x.get('metaBuffer').length, x.get('size')), identity)
-  //   .last()
-  //   .flatMap(x => ob.fsTruncate(x.get('fd'), x.get('size')), identity)
-  //   .flatMap(x => ob.fsRename(x.get('path'), x.get('path').replace('.mtd', '')), identity)
+    .map(x => x.set('metaBuffer', toBuffer(x.filter(utils.keyIn(['fd', 'url', 'writtenPositions', 'path', 'size', 'threads'])).toJS())))
+    .flatMap(x => ob.fsWrite(x.get('fd'), x.get('metaBuffer'), 0, x.get('metaBuffer').length, x.get('size')), identity)
+    .last()
+    .flatMap(x => ob.fsTruncate(x.get('fd'), x.get('size')), identity)
+    .flatMap(x => ob.fsRename(x.get('path'), x.get('path').replace('.mtd', '')), identity)
 }
 
 class Download {

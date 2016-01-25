@@ -26,9 +26,10 @@ function getImage(options) {
     var s = mtd.startSingle();
 
     s.then(function(ctx) {
+        let [evt, fd] = ctx;
         console.log("resolved");
         console.dir(arguments);
-        fsRead(ctx.fd.db, options.path, (e, res, evt) => {
+        fsRead(fd.db, options.path, (e, res, evt) => {
             console.log("got result ");
             console.dir(res);
             console.dir(evt);
@@ -49,9 +50,10 @@ function getVideo(options) {
     var s = mtd.startSingle();
 
     s.then(function(ctx) {
+        let [evt, fd] = ctx;
         console.log("resolved");
         console.dir(arguments);
-        fsRead(ctx.fd.db, options.path, (e, res, evt) => {
+        fsRead(fd.db, options.path, (e, res, evt) => {
             console.log("got result ");
             console.dir(res);
             console.dir(evt);
