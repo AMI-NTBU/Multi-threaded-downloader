@@ -21,8 +21,9 @@ var rangeHeader = (thread) => ({'range': `bytes=${thread.start}-${thread.end}`})
 var toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
 
 function singleThreadDownload(options) {
-  const writableFile = ob.fsOpen(options['path'], 'w+');
-
+  const opt = fromJS(options)
+  const writableFile = ob.fsOpen(opt.get('path'), 'w+')
+  const downloadSize = ob.requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS()).map(getContentLength).filter(_.isFinite)
   const downloadedFile = Rx.Observable.create(observer => {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", options.url);

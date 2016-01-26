@@ -62,14 +62,19 @@ let requestBody = (params) => {
 }
 
 let requestHeadWrapped = (options, cb) => {
-  var x = 3;
-  console.dir(options);
-  //options.headers = {"Access-Control-Allow-Origin": "*"};
+  let xhr = new XMLHttpRequest();
+  let res = {headers: {}};
 
-  request.head(options, cb);
+  xhr.open('HEAD', options.url);
+  xhr.onload = () => {
+    res.headers['content-length'] = xhr.getResponseHeader('Content-Length');
+    console.log('request head cb', res)
+    cb(false, res);
+  }
+  xhr.onerror = () => {
+  }
+  xhr.send();
 }
-
-let requestHead = Rx.Observable.fromNodeCallback(requestHeadWrapped, null, _.identity)
 
 let fsOpen = (path, flags, ...rest) => {
   let cb = rest[rest.length-1];
@@ -120,17 +125,36 @@ let fsRead = (db, path, cb) => {
 // let fsTruncate = () => {
 // }
 
-// let fsRename = () => {
-// }
+let fsRename = (oldName, newName, cb) => {
+  let store = getObjectStore(DB_STORE_NAME, 'readwrite');
+  let request = store.get(oldName);
+  request.onerror = (evt) => {
+    console.error('fsRename:', evt.target.errorCode);
+    cb(evt);
+  };
+  request.onsuccess = (evt) => {
+    let data = request.result;
+
+    data.fileName = newName;
+    let requestUpdate = objectStore.put(data);
+    requestUpdate.onerror = (evt) => {
+      console.error('requestUpdate:', evt.target.errorCode);
+      cb(evt);
+    };
+    requestUpdate.onsuccess = (evt) => {
+      console.log('fsRename DONE');
+    };
+  };
+}
 
 supported();
 
 module.exports = {
   requestBody,
-  requestHead,
+  requestHead: Rx.Observable.fromNodeCallback(requestHeadWrapped, null, _.identity),
   fsOpen: Rx.Observable.fromNodeCallback(fsOpen),
   fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
   // fsTruncate,
-  // fsRename
+  fsRename
 }
 module.exports.fsRead = fsRead;
