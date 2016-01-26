@@ -15,24 +15,11 @@ let requestBody = (params) => {
   })
 };
 
-function ab2str(buf) {
-    return String.fromCharCode.apply(null, new Uint16Array(buf));
-}
-
-function str2ab(str) {
-    var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
-    var bufView = new Uint16Array(buf);
-    for (var i=0, strLen=str.length; i<strLen; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
-
 var fs = null;
 
 function getFS(cb) {
     if(!fs) {
-        navigator.webkitPersistentStorage.requestQuota(1024*1024*1024, function(grantedBytes) {
+        navigator.webkitPersistentStorage.requestQuota(1024 * 1024 * 1024, function(grantedBytes) {
             window.webkitRequestFileSystem(PERSISTENT, grantedBytes, function(result){
                 fs = WebFS(result.root);
                 cb(fs);
@@ -52,6 +39,7 @@ let fsOpen = (path, flags, ...rest) => {
 
 let fsWrite = (ctx, buffer, offset, length, position, cb) => {
     let {fs, path} = ctx;
+    console.log(`writing buffer of length ${length} to ${path} at ${position}`);
     fs.write(path, buffer, offset, length, position, cb);
 }
 
@@ -61,8 +49,9 @@ let fsTruncate = (ctx, length, cb) => {
 }
 
 let fsRename = (from, to, cb) => {
+    console.log("renaming %s to %s", from, to);
     getFS((fs) => {
-        fs.rename(from, to);
+        fs.rename(from, to, cb);
     });
 }
 
@@ -71,8 +60,7 @@ let fsRead = (path, cb) => {
         fs.readFile(path, 'blob', (err, data) => {
             if(err) return cb(err);
             return cb(false, data);
-            return cb(false, str2ab(data));
-        })
+        });
     });
 }
 
