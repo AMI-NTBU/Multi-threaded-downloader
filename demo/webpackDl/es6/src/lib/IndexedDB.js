@@ -1,4 +1,3 @@
-import request from 'request'
 import Rx from 'rx'
 import _ from 'lodash'
 
@@ -50,8 +49,27 @@ let addPublication = (db, fileName, blob, cb) => {
   };
 }
 
+let parseResponseHeaders = (headerStr) => {
+  let headers = {'headers': {}};
+  if (!headerStr) {
+    return headers;
+  }
+  let headerPairs = headerStr.split('\u000d\u000a');
+  for (let i = 0; i < headerPairs.length; i++) {
+    let headerPair = headerPairs[i];
+    let index = headerPair.indexOf('\u003a\u0020');
+    if (index > 0) {
+      let key = headerPair.substring(0, index);
+      let val = headerPair.substring(index + 2);
+      headers.headers[key] = val;
+    }
+  }
+  return headers;
+}
+
 let requestBody = (params) => {
-  var responseHeaders
+  let responseHeaders;
+
   return Rx.Observable.create((observer) => {
     request(params)
       .on('data', buffer => observer.onNext({buffer, headers: responseHeaders}))
@@ -63,16 +81,14 @@ let requestBody = (params) => {
 
 let requestHeadWrapped = (options, cb) => {
   let xhr = new XMLHttpRequest();
-  let res = {headers: {}};
 
   xhr.open('HEAD', options.url);
   xhr.onload = () => {
-    res.headers['content-length'] = xhr.getResponseHeader('Content-Length');
-    console.log('request head cb', res)
-    cb(false, res);
-  }
+    cb(null, parseResponseHeaders(xhr.getAllResponseHeaders()));
+  };
   xhr.onerror = () => {
-  }
+    console.error('error in requestHead');
+  };
   xhr.send();
 }
 
@@ -91,7 +107,7 @@ let fsOpen = (path, flags, ...rest) => {
   };
   req.onupgradeneeded = (evt) => {
     console.log('openDb.onupgradeneeded');
-    var store = evt.currentTarget.result.createObjectStore(
+    let store = evt.currentTarget.result.createObjectStore(
       DB_STORE_NAME, { keyPath: 'fileName', autoIncrement : false });
 
     store.createIndex('blob', 'blob', { unique: false });
@@ -147,7 +163,9 @@ let fsRename = (oldName, newName, cb) => {
   };
 }
 
-supported();
+if (!supported()) {
+  alert("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
+}
 
 module.exports = {
   requestBody,

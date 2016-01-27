@@ -4,6 +4,7 @@
 'use strict'
 
 var _ = require('lodash')
+var Rx = require('rx')
 var utils = require('./lib/Utility')
 var ob
 const {fromJS} = require('immutable')
@@ -21,9 +22,17 @@ var rangeHeader = (thread) => ({'range': `bytes=${thread.start}-${thread.end}`})
 var toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
 
 function singleThreadDownload(options) {
+  console.log('singleThreadDownload')
   const opt = fromJS(options)
   const writableFile = ob.fsOpen(opt.get('path'), 'w+')
-  const downloadSize = ob.requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS()).map(getContentLength).filter(_.isFinite)
+  const setDownloadSize = ob.requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS(), function(e, res) {
+    if (e) {
+      throw new Error(e);
+    }
+    let size = parseInt(res.headers['Content-Length'], 10);
+    opt.set('size', size);
+  })
+
   const downloadedFile = Rx.Observable.create(observer => {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", options.url);
@@ -40,9 +49,9 @@ function singleThreadDownload(options) {
 
 
   return writableFile
-    .zip(downloadedFile, (fd, buffer) => _.merge(options, {fd: fd, buffer: buffer}))
+    .zip(downloadedFile, (fd, buffer) => opt.set('fd', fd).set('buffer', buffer))
     .flatMap(ctx => {
-      return ob.fsWrite(ctx.fd, ctx.buffer, 0, ctx.buffer.length, 0)
+      return ob.fsWrite(ctx.get('fd'), ctx.get('buffer'), 0, ctx.get('size'), 0)
     });
 }
 
@@ -83,8 +92,13 @@ class Download {
   }
 
   static setOb (b) {
-    console.log('setOb')
-    ob = require(b)
+    if (b === './lib/IndexedDB') {
+      ob = require('./lib/IndexedDB');
+    } else if (b === './lib/WebFS') {
+      ob = require('./lib/WebFS')
+    } else {
+      ob = require('./lib/Observables')
+    }
   }
 
   start () {
