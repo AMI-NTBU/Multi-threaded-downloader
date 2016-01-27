@@ -95,7 +95,7 @@ class Download {
           console.error("Invalid Observable library!");
       }
       return;
-    } else if(typeof b === 'function') {
+    } else if(typeof b === 'object') {
       ob = b;
     }
   }
