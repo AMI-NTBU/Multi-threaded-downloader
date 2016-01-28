@@ -25,7 +25,6 @@ let getObjectStore = (store_name, mode) => {
  * @param {Blob=} blob
  */
 let addPublication = (db, fileName, blob, cb) => {
-  //console.log('addPublication arguments:', arguments);
   let obj = { fileName: fileName, id: 0 };
   if (typeof blob != 'undefined')
     obj.blob = blob;
@@ -71,12 +70,22 @@ let requestBody = (params) => {
   let responseHeaders;
 
   return Rx.Observable.create((observer) => {
-    request(params)
-      .on('data', buffer => observer.onNext({buffer, headers: responseHeaders}))
-      .on('response', x => responseHeaders = x.headers)
-      .on('complete', x => observer.onCompleted(x))
-      .on('error', x => observer.onError(x))
-  })
+    let xhr = new XMLHttpRequest();
+
+    xhr.open('GET', params.url);
+    xhr.onload = () => {
+      observer.onNext(xhr.response);
+      // observer.onNext({xhr.response, headers: parseResponseHeaders(xhr.getAllResponseHeaders())})
+    };
+    xhr.onloadend = () => {
+      observer.onCompleted();
+    };
+    xhr.onerror = (e) => {
+      observer.onError(e);
+    };
+    xhr.responseType = 'blob';
+    xhr.send();
+  });
 }
 
 let requestHeadWrapped = (options, cb) => {
@@ -86,8 +95,8 @@ let requestHeadWrapped = (options, cb) => {
   xhr.onload = () => {
     cb(null, parseResponseHeaders(xhr.getAllResponseHeaders()));
   };
-  xhr.onerror = () => {
-    console.error('error in requestHead');
+  xhr.onerror = (e) => {
+    console.error('error in requestHead', e);
   };
   xhr.send();
 }
@@ -118,7 +127,6 @@ let fsWrite = (ctx, buffer, offset, length, position, cb) => {
   let {db, fileName} = ctx;
   console.log('add ...');
 
-  // put sth here
   addPublication(db, fileName, buffer, (err, evt) => {
     cb(err, evt, ctx);
   });
@@ -138,7 +146,7 @@ let fsRead = (db, path, cb) => {
 
 }
 
-// let fsTruncate = () => {
+// let fsTruncate = (ctx, len, callback) => {
 // }
 
 let fsRename = (oldName, newName, cb) => {
