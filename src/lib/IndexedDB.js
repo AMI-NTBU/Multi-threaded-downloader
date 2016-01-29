@@ -146,13 +146,14 @@ let fsRename = (oldName, newName, cb) => {
     let data = request.result;
 
     data.fileName = newName;
-    let requestUpdate = objectStore.put(data);
+    let requestUpdate = store.put(data);
     requestUpdate.onerror = (evt) => {
       console.error('requestUpdate:', evt.target.errorCode);
       cb(evt);
     };
     requestUpdate.onsuccess = (evt) => {
       console.log('fsRename DONE');
+      cb(false, evt);
     };
   };
 }
@@ -165,6 +166,6 @@ module.exports = {
   fsOpen: Rx.Observable.fromNodeCallback(fsOpen),
   fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
   // fsTruncate,
-  fsRename
+  fsRename: Rx.Observable.fromNodeCallback(fsRename)
 }
 module.exports.fsRead = fsRead;
