@@ -56,9 +56,13 @@ let fsRename = (from, to, cb) => {
     });
 }
 
-let fsRead = (path, cb) => {
+let fsRead = (path, type, cb) => {
+    if(typeof cb === 'undefined')  {
+        cb = type;
+        type = 'blob';
+    }
     getFS((fs) => {
-        fs.readFile(path, 'blob', (err, data) => {
+        fs.readFile(path, type, (err, data) => {
             if(err) return cb(err);
             return cb(false, data);
         });
