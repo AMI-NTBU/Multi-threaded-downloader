@@ -20,99 +20,12 @@ var getContentLength = (res) => res.headers['content-length'] ?  parseInt(res.he
 var rangeHeader = (thread) => ({'range': `bytes=${thread.start}-${thread.end}`})
 var toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
 
-function drawImage(srcURI) {
-  console.log("IMAGE URI : " + srcURI);
-  console.log("Open file : " + srcURI);
-
-  var drawImage_SuccessCb = function(cbObject) {
-    console.log("Image read success : " + cbObject.data.byteLength + " Bytes");
-    console.log("Load image : " + srcURI);
-    console.log(cbObject.data);
-    var binary_data = [];
-    var chararray = [];
-
-    // Get Binary Data
-    var dataView = new DataView(cbObject.data);
-    // Encode binary to base64
-
-    for (var i = 0; i < cbObject.data.byteLength; i++) {
-      binary_data[i] = ("00" + dataView.getUint8(i).toString(16)).substr(-2).toUpperCase();
-      chararray[i] = String.fromCharCode(parseInt(binary_data[i], 16)).toString('base64');
-    }
-    var data_base64 = btoa(chararray.join(""));
-
-    // Draw image
-    var imageSrc = document.getElementById('picture');
-    imageSrc.src = "data:image/jpeg;base64, " + data_base64.toString();
-  }
-
-  var drawImage_FailureCb = function(cbObject) {
-    console.log("Failed to load image - Path : " + srcURI);
-    console.log(JSON.stringify(cbObject));
-
-    var errorCode = cbObject.errorCode;
-    var errorText = cbObject.errorText;
-    var errorMessage = "Error Code [" + errorCode + "]: " + errorText;
-    console.log(errorMessage);
-  }
-
-  var drawImage_option = {
-    path : srcURI,
-    positon : 0,
-    encoding: 'binary'
-  };
-
-  var storage = new Storage();
-  storage.readFile(drawImage_SuccessCb, drawImage_FailureCb, drawImage_option);
-}
-
 function singleThreadDownload(options) {
   console.log('singleThreadDownload')
   const opt = fromJS(options)
   console.log(options)
 
-  const DOWNLOAD_INTERNAL_URL = 'file://internal/' + opt.get('path');
-
-  let opts = {
-    file : DOWNLOAD_INTERNAL_URL
-  };
-
-  let storage = new Storage();
-  storage.removeFile(successCallback, errorCallback, opts);
-
-  function successCallback(cbObject) {
-    console.log('fsOpen successCallback');
-  }
-
-  function errorCallback(cbObject) {
-    let errorCode = cbObject.errorCode,
-        errorText = cbObject.errorText;
-    console.log("Error Code [" + errorCode + "]: " + errorText);
-  }
-
-  console.log('downloadFile')
-  console.log('getFileInfo', opt.get('url'))
-  var req = new XMLHttpRequest();
-  req.open('GET', opt.get('url'), false);
-  req.send(null);
-  let TOTAL_FILE_SIZE = parseInt(req.getResponseHeader('content-length'));
-  console.log("File Size : " + TOTAL_FILE_SIZE);
-
-  var downloadOptions = {
-    source : opt.get('url'),
-    destination : DOWNLOAD_INTERNAL_URL
-  };
-
-  storage.copyFile(successCb, failureCb, downloadOptions);
-
-  function successCb() {
-    console.log('dl success')
-    drawImage(DOWNLOAD_INTERNAL_URL)
-  }
-
-  function failureCb() {
-    console.log('dl failed')
-  }
+  return ob.fsWrite(opt);
 }
 
 function download (options) {

@@ -1,5 +1,7 @@
 import Download from './src/app.js';
-import {fsRead} from './src/lib/IndexedDB.js';
+import {fsRead} from './src/lib/WebOS.js';
+
+const LOCALHOST_URL = 'http://127.0.0.1:9080/';
 
 let options = {
   strictSSL: false,
@@ -7,7 +9,6 @@ let options = {
     path: './2a56505d11ce93278ed0937615bdd75f.jpg',
     threadCount: 1
 };
-
 
 let vidOptions = {
     strictSSL: false,
@@ -17,56 +18,78 @@ let vidOptions = {
 };
 
 // Download.setOb('./lib/Observables')
-Download.setOb('indexeddb');
-//getVideo(vidOptions);
+Download.setOb('webos');
+getVideo(vidOptions);
 getImage(options);
 
 function getImage(options) {
     let mtd = new Download(options);
     var s = mtd.startSingle();
 
-/*    s.then(function(ctx) {
-        let [evt, fd] = ctx;
-        console.log("resolved");
-        console.dir(arguments);
-        fsRead(fd.db, options.path, (e, res, evt) => {
-            console.log("got result ");
-            console.dir(res);
-            console.dir(evt);
-            window.dbresult = res;
-            var url = window.URL.createObjectURL(res.blob);
-            var img = document.getElementById("picture");
-            img.src = url;
-        });
+    s.subscribe((x) => {
+      console.log('Next: success!', x);
+      fsRead(x, (e) => {
+        let img = document.getElementById('picture');
+        img.src = LOCALHOST_URL + x.fileName;
+      });
+    },
+    (err) => {
+      console.log('Error: ' + err);
+    });
 
-    }, function() {
-        console.log("rejected");
-        console.dir(arguments);
-    });*/
+    // s.then(function(ctx) {
+    //     let [evt, fd] = ctx;
+        // console.log("resolved", ctx);
+    //     console.log(ctx)
+    //     console.dir(arguments);
+    //     fsRead(fd, (e, res, evt) => {
+    //         console.log("got result ");
+    //         console.dir(res);
+    //         console.dir(evt);
+    //     //     window.dbresult = res;
+    //     //     var url = window.URL.createObjectURL(res.blob);
+    //         var img = document.getElementById("picture");
+    //         img.src = 'http://127.0.0.1:9080/' + fd.fileName;
+    //     });
+    // }, function() {
+    //     console.log("rejected");
+    //     console.dir(arguments);
+    // });
 }
 
 function getVideo(options) {
     let mtd = new Download(options);
     var s = mtd.startSingle();
 
-    s.then(function(ctx) {
-        let [evt, fd] = ctx;
-        console.log("resolved");
-        console.dir(arguments);
-        fsRead(fd.db, options.path, (e, res, evt) => {
-            console.log("got result ");
-            console.dir(res);
-            console.dir(evt);
-            window.dbresult = res;
-            var url = window.URL.createObjectURL(res.blob);
-            var vid = document.getElementById("vid");
-            vid.src = url;
-            vid.play();
-        });
-
-    }, function() {
-        console.log("rejected");
-        console.dir(arguments);
+    s.subscribe((x) => {
+      console.log('Next: success!', x);
+      fsRead(x, (e) => {
+        let vid = document.getElementById('vid');
+        vid.src = LOCALHOST_URL + x.fileName;
+        vid.play();
+      });
+    },
+    (err) => {
+      console.log('Error: ' + err);
     });
 
+    // s.then(function(ctx) {
+    //     let [evt, fd] = ctx;
+    //     console.log("resolved");
+    //     console.dir(arguments);
+    //     fsRead(fd.db, options.path, (e, res, evt) => {
+    //         console.log("got result ");
+    //         console.dir(res);
+    //         console.dir(evt);
+    // //         window.dbresult = res;
+    // //         var url = window.URL.createObjectURL(res.blob);
+    //         var vid = document.getElementById("vid");
+    //         vid.src = 'http://127.0.0.1:9080/' + fd.fileName;
+    //         vid.play();
+    //     });
+
+    // }, function() {
+    //     console.log("rejected");
+    //     console.dir(arguments);
+    // });
 }
