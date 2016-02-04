@@ -1,5 +1,4 @@
 import Download from './src/app.js';
-import {fsRead} from './src/lib/WebOS.js';
 
 const LOCALHOST_URL = 'http://127.0.0.1:9080/';
 
@@ -17,7 +16,6 @@ let vidOptions = {
     threadCount: 1
 };
 
-// Download.setOb('./lib/Observables')
 Download.setOb('webos');
 getVideo(vidOptions);
 getImage(options);
