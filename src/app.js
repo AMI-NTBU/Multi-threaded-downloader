@@ -16,32 +16,16 @@ var defaultOptions = {
   strictSSL: true
 }
 
-var getContentLength = (res) => parseInt(res.headers['content-length'], 10)
+var getContentLength = (res) => res.headers['content-length'] ?  parseInt(res.headers['content-length'], 10) :  parseInt(res.headers['Content-Length'], 10)
 var rangeHeader = (thread) => ({'range': `bytes=${thread.start}-${thread.end}`})
 var toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
 
 function singleThreadDownload(options) {
+  console.log('singleThreadDownload')
   const opt = fromJS(options)
-  const writableFile = ob.fsOpen(opt.get('path'), 'w+')
-  const downloadedFile = Rx.Observable.create(observer => {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", options.url);
-    xhr.onload = () => {
-      observer.onNext(xhr.response);
-      observer.onCompleted();
-    }
-    xhr.onerror = () => {
-      observer.onError(xhr);
-    }
-    xhr.responseType = "blob";
-    xhr.send();
-  });
+  console.log(options)
 
-  return writableFile
-    .zip(downloadedFile, (fd, buffer) => _.merge(options, {fd: fd, buffer: buffer}))
-    .flatMap(ctx => {
-      return ob.fsWrite(ctx.fd, ctx.buffer, 0, ctx.buffer.length, 0)
-    });
+  return ob.fsWrite(opt);
 }
 
 function download (options) {
@@ -50,7 +34,7 @@ function download (options) {
   const writableFile = ob.fsOpen(opt.get('path'), 'w+')
   const downloadSize = ob.requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS()).map(getContentLength).filter(_.isFinite)
 
-    return downloadSize.combineLatest(writableFile, (size, fd) => opt.set('size', size).set('fd', fd))
+  return downloadSize.combineLatest(writableFile, (size, fd) => opt.set('size', size).set('fd', fd))
     .map(x => x.set('threads', fromJS(utils.sliceRange(x.get('threadCount'), x.get('size')))))
     .flatMap(x => map(x.get('threads').toJS(), (thread, i) => x.set('headers', fromJS(rangeHeader(thread))).set('threadIndex', i).set('start', thread.start)))
     .tap(x => writePositions = writePositions.set(x.get('threadIndex'), x.get('start')))
@@ -63,7 +47,7 @@ function download (options) {
     .flatMap(x => ob.fsWrite(x.get('fd'), x.get('buffer'), 0, x.get('buffer').length, x.get('writtenPositions').get(x.get('threadIndex')) - x.get('buffer').length), identity)
     .map(x => x.set('metaBuffer', toBuffer(x.filter(utils.keyIn(['fd', 'url', 'writtenPositions', 'path', 'size', 'threads'])).toJS())))
     .flatMap(x => ob.fsWrite(x.get('fd'), x.get('metaBuffer'), 0, x.get('metaBuffer').length, x.get('size')), identity)
-        .last().do((x)=>{console.log("complete")})
+    .last().do((x)=>{console.log("complete")})
     .flatMap(x => ob.fsTruncate(x.get('fd'), x.get('size')), identity)
     .flatMap(x => ob.fsRename(x.get('path'), x.get('path').replace('.mtd', '')), identity)
 }
@@ -89,9 +73,12 @@ class Download {
         case "webfs":
           ob = require("./lib/WebFS");
           break;
-        case "observables":
-          ob = require("./lib/Observables");
+        case "webos":
+          ob = require("./lib/WebOS");
           break;
+        // case "observables":
+        //   ob = require("./lib/Observables");
+        //   break;
         default:
           console.error("Invalid Observable library!");
       }
@@ -111,7 +98,8 @@ class Download {
     console.log('start')
     this.options.path = this.options.path.slice(0,-4); //remove .mtd
     let d = singleThreadDownload(this.options);
-    return d.toPromise();
+    // return d.toPromise();
+    return d;
   }
 
   fsRead(path, cb) {

@@ -28,7 +28,7 @@ function getImage(options) {
 
     s.subscribe((x) => {
       console.log('Next: success!', x);
-      fsRead(x, (e) => {
+      mtd.fsRead(x, (e) => {
         let img = document.getElementById('picture');
         img.src = LOCALHOST_URL + x.fileName;
       });
@@ -63,7 +63,7 @@ function getVideo(options) {
 
     s.subscribe((x) => {
       console.log('Next: success!', x);
-      fsRead(x, (e) => {
+      mtd.fsRead(x, (e) => {
         let vid = document.getElementById('vid');
         vid.src = LOCALHOST_URL + x.fileName;
         vid.play();

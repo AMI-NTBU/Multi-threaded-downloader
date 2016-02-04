@@ -23,7 +23,6 @@ var toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
 function singleThreadDownload(options) {
   console.log('singleThreadDownload')
   const opt = fromJS(options)
-  console.log(options)
 
   return ob.fsWrite(opt);
 }
@@ -102,6 +101,10 @@ class Download {
     let d = singleThreadDownload(this.options);
     // return d.toPromise();
     return d;
+  }
+
+  fsRead(path, cb) {
+    return ob.fsRead(path, cb);
   }
 
   stop () {
