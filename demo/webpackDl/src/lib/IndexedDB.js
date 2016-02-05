@@ -132,16 +132,26 @@ let fsWrite = (ctx, buffer, offset, length, position, cb) => {
   });
 }
 
-let fsRead = (db, path, cb) => {
-  let store = getObjectStore(DB_STORE_NAME, 'readwrite');
-  let req = store.get(path);
-  console.log("getting " + path);
-  req.onsuccess = (evt) => {
-    cb(false, evt.target.result, evt);
+let fsRead = (path, cb) => {
+  if(db) doRead();
+  else {
+    fsOpen(path, "w+", (e, fd) => {
+      if(e) return cb(e);
+      else doRead();
+    });
   }
 
-  req.onerror = (evt) => {
-    cb(evt);
+  function doRead() {
+    let store = getObjectStore(DB_STORE_NAME, 'readwrite');
+    let req = store.get(path);
+    console.log("getting " + path);
+    req.onsuccess = (evt) => {
+      cb(false, evt.target.result, evt);
+    }
+
+    req.onerror = (evt) => {
+      cb(evt);
+    }
   }
 
 }
@@ -181,6 +191,6 @@ module.exports = {
   fsOpen: Rx.Observable.fromNodeCallback(fsOpen),
   fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
   // fsTruncate,
-  fsRename
+  fsRename,
+  fsRead
 }
-module.exports.fsRead = fsRead;

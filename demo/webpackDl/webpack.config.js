@@ -2,7 +2,7 @@ var path = require('path');
 var webpack = require('webpack');
 
 module.exports = {
-    entry: './es6/entry.js',
+    entry: './entry.js',
     output: {
         path: __dirname,
         filename: 'bundle.js',
@@ -13,7 +13,7 @@ module.exports = {
         loaders: [
             {
                 loader: 'babel-loader',
-                test: path.join(__dirname, 'es6'),
+                test: __dirname,
                 query: {
                   presets: 'es2015',
                 },

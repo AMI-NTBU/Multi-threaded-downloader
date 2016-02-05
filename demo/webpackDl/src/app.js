@@ -92,12 +92,25 @@ class Download {
   }
 
   static setOb (b) {
-    if (b === './lib/IndexedDB') {
-      ob = require('./lib/IndexedDB');
-    } else if (b === './lib/WebFS') {
-      ob = require('./lib/WebFS')
-    } else {
-      ob = require('./lib/Observables')
+    console.log('setOb')
+    if(typeof b === "string") {
+      b = b.toLowerCase();
+      switch(b) {
+        case "indexeddb":
+          ob = require("./lib/IndexedDB");
+          break;
+        case "webfs":
+          ob = require("./lib/WebFS");
+          break;
+        case "observables":
+          ob = require("./lib/Observables");
+          break;
+        default:
+          console.error("Invalid Observable library!");
+      }
+      return;
+    } else if(typeof b === 'object') {
+      ob = b;
     }
   }
 
@@ -116,6 +129,11 @@ class Download {
 
   stop () {
   }
+
+  fsRead(path, cb) {
+    ob.fsRead(path, cb);
+  }
+
 }
 
 module.exports = Download

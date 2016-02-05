@@ -1,9 +1,8 @@
 import Download from './src/app.js';
-import {fsRead} from './src/lib/IndexedDB.js';
 
 let options = {
   strictSSL: false,
-    url: 'http://172.16.97.249:3000/static/dl.jpg',//'https://www.google.com/logos/doodles/2016/wilbur-scovilles-151st-birthday-6275288709201920.2-hp.png',//'https://s-media-cache-ak0.pinimg.com/736x/2a/56/50/2a56505d11ce93278ed0937615bdd75f.jpg',
+    url: 'http://172.16.56.198:3000/static/dl.jpg',//'https://www.google.com/logos/doodles/2016/wilbur-scovilles-151st-birthday-6275288709201920.2-hp.png',//'https://s-media-cache-ak0.pinimg.com/736x/2a/56/50/2a56505d11ce93278ed0937615bdd75f.jpg',
     path: './2a56505d11ce93278ed0937615bdd75f.jpg',
     threadCount: 1
 };
@@ -11,13 +10,12 @@ let options = {
 
 let vidOptions = {
     strictSSL: false,
-    url: 'http://172.16.97.249:3000/static/vid.mp4',
+    url: 'http://172.16.56.198:3000/static/vid.mp4',
     path: './vid.mp4',
     threadCount: 1
 };
 
-// Download.setOb('./lib/Observables')
-Download.setOb('./lib/IndexedDB');
+Download.setOb('IndexedDB');
 getVideo(vidOptions);
 getImage(options);
 
@@ -29,7 +27,7 @@ function getImage(options) {
         let [evt, fd] = ctx;
         console.log("resolved");
         console.dir(arguments);
-        fsRead(fd.db, options.path, (e, res, evt) => {
+        mtd.fsRead(options.path, (e, res, evt) => {
             console.log("got result ");
             console.dir(res);
             console.dir(evt);
@@ -53,7 +51,7 @@ function getVideo(options) {
         let [evt, fd] = ctx;
         console.log("resolved");
         console.dir(arguments);
-        fsRead(fd.db, options.path, (e, res, evt) => {
+        mtd.fsRead(options.path, (e, res, evt) => {
             console.log("got result ");
             console.dir(res);
             console.dir(evt);
