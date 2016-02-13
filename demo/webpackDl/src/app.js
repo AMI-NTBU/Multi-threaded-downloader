@@ -24,7 +24,7 @@ function singleThreadDownload(options) {
   console.log('singleThreadDownload')
   const opt = fromJS(options)
 
-  return ob.fsWrite(opt);
+  return ob.download(opt).toPromise();
 }
 
 function download (options) {
@@ -64,7 +64,7 @@ class Download {
   }
 
   static setOb (b) {
-    console.log('setOb')
+    console.log('setOb', b)
     if(typeof b === "string") {
       b = b.toLowerCase();
       switch(b) {
@@ -77,9 +77,9 @@ class Download {
         case "webos":
           ob = require("./lib/WebOS");
           break;
-        case "observables":
-          ob = require("./lib/Observables");
-          break;
+        // case "observables":
+        //   ob = require("./lib/Observables");
+        //   break;
         default:
           console.error("Invalid Observable library!");
       }
@@ -99,16 +99,18 @@ class Download {
     console.log('start')
     this.options.path = this.options.path.slice(0,-4); //remove .mtd
     let d = singleThreadDownload(this.options);
-    // return d.toPromise();
+    //return d.toPromise();
     return d;
-  }
-
-  fsRead(path, cb) {
-    return ob.fsRead(path, cb);
   }
 
   stop () {
   }
+
+  fsRead(path, cb) {
+    ob.fsRead(path, cb);
+  }
+
+
 }
 
 module.exports = Download
