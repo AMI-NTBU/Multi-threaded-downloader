@@ -176,7 +176,7 @@ let fsRename = (oldName, newName, cb) => {
     let data = request.result;
 
     data.fileName = newName;
-    let requestUpdate = objectStore.put(data);
+    let requestUpdate = store.put(data);
     requestUpdate.onerror = (evt) => {
       console.error('requestUpdate:', evt.target.errorCode);
       cb(evt);
@@ -199,11 +199,10 @@ let getContentLength = (res) => res.headers['content-length'] ?  parseInt(res.he
 let rangeHeader = (thread) => ({'range': `bytes=${thread.start}-${thread.end}`})
 let toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
 let download = (opt) => {
-  console.log('download', utils)
+  console.log('download')
   let writePositions = fromJS(times(opt.get('threadCount'), 0))
   const writableFile = dbOpen(opt.get('path'), 'w+');
   const downloadSize = requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS()).map(getContentLength).filter(_.isFinite)
-  console.log('dds')
 
   return downloadSize.combineLatest(writableFile, (size, fd) => opt.set('size', size).set('fd', fd))
     .map(x => x.set('threads', fromJS(utils.sliceRange(x.get('threadCount'), x.get('size')))))
@@ -234,6 +233,6 @@ module.exports = {
   fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
   // fsTruncate,
   fsRename,
-  fsRead, 
+  fsRead,
   download
 }

@@ -1,4 +1,3 @@
-//import request from 'request'
 import Rx from 'rx'
 import _ from 'lodash'
 
@@ -26,7 +25,6 @@ let getObjectStore = (store_name, mode) => {
  * @param {Blob=} blob
  */
 let addPublication = (db, fileName, blob, cb) => {
-  //console.log('addPublication arguments:', arguments);
   let obj = { fileName: fileName, id: 0 };
   if (typeof blob != 'undefined')
     obj.blob = blob;
@@ -49,30 +47,63 @@ let addPublication = (db, fileName, blob, cb) => {
     cb(err);
   };
 }
-/*
-let requestBody = (params) => {
-  var responseHeaders
-  return Rx.Observable.create((observer) => {
-    request(params)
-      .on('data', buffer => observer.onNext({buffer, headers: responseHeaders}))
-      .on('response', x => responseHeaders = x.headers)
-      .on('complete', x => observer.onCompleted(x))
-      .on('error', x => observer.onError(x))
-  })
+
+let parseResponseHeaders = (headerStr) => {
+  let headers = {'headers': {}};
+  if (!headerStr) {
+    return headers;
+  }
+  let headerPairs = headerStr.split('\u000d\u000a');
+  for (let i = 0; i < headerPairs.length; i++) {
+    let headerPair = headerPairs[i];
+    let index = headerPair.indexOf('\u003a\u0020');
+    if (index > 0) {
+      let key = headerPair.substring(0, index);
+      let val = headerPair.substring(index + 2);
+      headers.headers[key] = val;
+    }
+  }
+  return headers;
 }
-*/
+
+let requestBody = (params) => {
+  console.log('requestBody')
+  let responseHeaders;
+
+  return Rx.Observable.create((observer) => {
+    let xhr = new XMLHttpRequest();
+
+    xhr.open('GET', params.url);
+    // xhr.setRequestHeader('Range', params.headers.range);
+    xhr.onload = () => {
+      let buffer = xhr.response;
+      let responseHeaders = parseResponseHeaders(xhr.getAllResponseHeaders());
+
+      console.log(buffer)
+      observer.onNext({buffer, headers: responseHeaders})
+    };
+    xhr.onloadend = () => {
+      observer.onCompleted();
+    };
+    xhr.onerror = (e) => {
+      observer.onError(e);
+    };
+    xhr.responseType = 'blob';
+    xhr.send();
+  });
+}
+
 let requestHeadWrapped = (options, cb) => {
+  console.log('requestHeadWrapped')
   let xhr = new XMLHttpRequest();
-  let res = {headers: {}};
 
   xhr.open('HEAD', options.url);
   xhr.onload = () => {
-    res.headers['content-length'] = xhr.getResponseHeader('Content-Length');
-    console.log('request head cb', res)
-    cb(false, res);
-  }
-  xhr.onerror = () => {
-  }
+    cb(null, parseResponseHeaders(xhr.getAllResponseHeaders()));
+  };
+  xhr.onerror = (e) => {
+    console.error('error in requestHead', e);
+  };
   xhr.send();
 }
 
@@ -91,7 +122,7 @@ let fsOpen = (path, flags, ...rest) => {
   };
   req.onupgradeneeded = (evt) => {
     console.log('openDb.onupgradeneeded');
-    var store = evt.currentTarget.result.createObjectStore(
+    let store = evt.currentTarget.result.createObjectStore(
       DB_STORE_NAME, { keyPath: 'fileName', autoIncrement : false });
 
     store.createIndex('blob', 'blob', { unique: false });
@@ -102,7 +133,6 @@ let fsWrite = (ctx, buffer, offset, length, position, cb) => {
   let {db, fileName} = ctx;
   console.log('add ...');
 
-  // put sth here
   addPublication(db, fileName, buffer, (err, evt) => {
     cb(err, evt, ctx);
   });
@@ -132,7 +162,7 @@ let fsRead = (path, cb) => {
 
 }
 
-// let fsTruncate = () => {
+// let fsTruncate = (ctx, len, callback) => {
 // }
 
 let fsRename = (oldName, newName, cb) => {
@@ -153,19 +183,56 @@ let fsRename = (oldName, newName, cb) => {
     };
     requestUpdate.onsuccess = (evt) => {
       console.log('fsRename DONE');
-      cb(false, evt);
     };
   };
 }
+let requestHead = Rx.Observable.fromNodeCallback(requestHeadWrapped)
+let dbOpen = Rx.Observable.fromNodeCallback(fsOpen)
+let dbWrite = Rx.Observable.fromNodeCallback(fsWrite)
 
-supported();
+const utils = require('./Utility')
+const {fromJS} = require('immutable')
+const {map, times, identity} = _
+const MAX_BUFFER = 512
+
+let getContentLength = (res) => res.headers['content-length'] ?  parseInt(res.headers['content-length'], 10) :  parseInt(res.headers['Content-Length'], 10)
+let rangeHeader = (thread) => ({'range': `bytes=${thread.start}-${thread.end}`})
+let toBuffer = _.partialRight(utils.toBuffer, MAX_BUFFER)
+let download = (opt) => {
+  console.log('download')
+  let writePositions = fromJS(times(opt.get('threadCount'), 0))
+  const writableFile = dbOpen(opt.get('path'), 'w+');
+  const downloadSize = requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS()).map(getContentLength).filter(_.isFinite)
+
+  return downloadSize.combineLatest(writableFile, (size, fd) => opt.set('size', size).set('fd', fd))
+    .map(x => x.set('threads', fromJS(utils.sliceRange(x.get('threadCount'), x.get('size')))))
+    .flatMap(x => map(x.get('threads').toJS(), (thread, i) => x.set('headers', fromJS(rangeHeader(thread))).set('threadIndex', i).set('start', thread.start)))
+    .tap(x => writePositions = writePositions.set(x.get('threadIndex'), x.get('start')))
+    .flatMap(x => requestBody(x.filter(utils.keyIn(['url', 'strictSSL', 'headers'])).toJS()), (x, data) => x.set('buffer', data.buffer))
+    .tap(x => {
+      var i = x.get('threadIndex')
+      writePositions = writePositions.set(i, writePositions.get(i) + x.get('buffer').size)
+    })
+    .map(x => x.set('writtenPositions', writePositions))
+    .flatMap(x => dbWrite(x.get('fd'), x.get('buffer'), 0, x.get('buffer').size, x.get('writtenPositions').get(x.get('threadIndex')) - x.get('buffer').size), identity)
+    .map(x => x.set('metaBuffer', toBuffer(x.filter(utils.keyIn(['fd', 'url', 'writtenPositions', 'path', 'size', 'threads'])).toJS())))
+    // .flatMap(x => ob.fsWrite(x.get('fd'), x.get('metaBuffer'), 0, x.get('metaBuffer').length, x.get('size')), identity)
+    .last()
+    // .flatMap(x => ob.fsTruncate(x.get('fd'), x.get('size')), identity)
+    // .flatMap(x => ob.fsRename(x.get('path'), x.get('path').replace('.mtd', '')), identity)
+}
+
+if (!supported()) {
+  alert("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.");
+}
 
 module.exports = {
-  //requestBody,
-  requestHead: Rx.Observable.fromNodeCallback(requestHeadWrapped, null, _.identity),
+  requestBody,
+  requestHead,
   fsOpen: Rx.Observable.fromNodeCallback(fsOpen),
   fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
   // fsTruncate,
-  fsRename: Rx.Observable.fromNodeCallback(fsRename)
+  fsRename,
+  fsRead,
+  download
 }
-module.exports.fsRead = fsRead;

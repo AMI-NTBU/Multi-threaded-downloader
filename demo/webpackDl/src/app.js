@@ -28,9 +28,7 @@ function singleThreadDownload(options) {
 }
 
 function download (options) {
-  console.log(options)
   const opt = fromJS(options)
-  console.log(opt)
   var writePositions = fromJS(times(opt.get('threadCount'), 0))
   const writableFile = ob.fsOpen(opt.get('path'), 'w+')
   const downloadSize = ob.requestHead(opt.filter(utils.keyIn(['url', 'strictSSL'])).toJS()).map(getContentLength).filter(_.isFinite)
