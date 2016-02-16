@@ -98,9 +98,7 @@ class Download {
   startSingle() {
     console.log('start')
     this.options.path = this.options.path.slice(0,-4); //remove .mtd
-    let d = singleThreadDownload(this.options);
-    //return d.toPromise();
-    return d;
+    return singleThreadDownload(this.options);
   }
 
   stop () {

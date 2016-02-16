@@ -25,23 +25,17 @@ function getImage(options) {
     var s = mtd.startSingle();
 
     s.then(function(ctx) {
-        let [evt, fd] = ctx;
         console.log("resolved");
-        console.dir(arguments);
-        mtd.fsRead(options.path, (e, res, evt) => {
+
+        mtd.fsRead(ctx, e => {
             console.log("got result ");
-            // console.dir(res);
-            // console.dir(evt);
-            // window.dbresult = res;
-            // var url = window.URL.createObjectURL(res.blob);
             var img = document.getElementById("picture");
-            // img.src = url;
-            img.src = LOCALHOST_URL + x.fileName;
+            img.src = LOCALHOST_URL + ctx.fileName;
         });
 
-    }, function() {
-        console.log("rejected");
-        console.dir(arguments);
+    })
+    .catch(function(x) {
+        console.log("rejected", x);
     });
 }
 
@@ -50,24 +44,18 @@ function getVideo(options) {
     var s = mtd.startSingle();
 
     s.then(function(ctx) {
-        let [evt, fd] = ctx;
         console.log("resolved");
-        console.dir(arguments);
-        mtd.fsRead(options.path, (e, res, evt) => {
+
+        mtd.fsRead(ctx, e => {
             console.log("got result ");
-            // console.dir(res);
-            // console.dir(evt);
-            // window.dbresult = res;
-            // var url = window.URL.createObjectURL(res.blob);
             var vid = document.getElementById("vid");
-            // vid.src = url;
-            vid.src = LOCALHOST_URL + x.fileName;
+            vid.src = LOCALHOST_URL + ctx.fileName;
             vid.play();
         });
 
-    }, function() {
-        console.log("rejected");
-        console.dir(arguments);
+    })
+    .catch(function(x) {
+        console.log("rejected", x);
     });
 
 }
