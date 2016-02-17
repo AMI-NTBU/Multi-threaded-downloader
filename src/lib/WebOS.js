@@ -1,29 +1,6 @@
 import Rx from 'rx'
 
-const DOWNLOAD_INTERNAL_URL = 'file://internal/';
 const LOCALHOST_URL = 'http://127.0.0.1:9080/';
-
-let fsOpen = (path, flags, ...rest) => {
-  let cb = rest[rest.length-1];
-  console.log('openDb ...');
-  let req = indexedDB.open(DB_NAME, DB_VERSION);
-  req.onsuccess = (evt) => {
-    db = evt.target.result;
-    console.log('openDb DONE', db);
-    cb(false, {db: db, fileName: path});
-  };
-  req.onerror = (evt) => {
-    console.error('openDb:', evt.target.errorCode);
-    cb(evt);
-  };
-  req.onupgradeneeded = (evt) => {
-    console.log('openDb.onupgradeneeded');
-    let store = evt.currentTarget.result.createObjectStore(
-      DB_STORE_NAME, { keyPath: 'fileName', autoIncrement : false });
-
-    store.createIndex('blob', 'blob', { unique: false });
-  };
-}
 
 let fsWrite = (opt, cb) => {
   console.log('download file')
@@ -31,7 +8,7 @@ let fsWrite = (opt, cb) => {
 
   let successCb = () => {
     console.log('dl success');
-    cb(null, {storage: storage, fileName: opt.get('path')});
+    cb(null, {storage: storage, filePath: opt.get('path')});
   }
 
   let failureCb = (cbObject) => {
@@ -41,7 +18,7 @@ let fsWrite = (opt, cb) => {
 
   let options = {
     source : opt.get('url'),
-    destination : DOWNLOAD_INTERNAL_URL + opt.get('path')
+    destination : opt.get('path')
   };
   storage.copyFile(successCb, failureCb, options);
 }
@@ -49,7 +26,8 @@ let fsWrite = (opt, cb) => {
 let fsRead = (fd, cb) => {
   console.log('fsRead');
   // let cb = rest[rest.length-1];
-  let {storage, fileName} = fd;
+  let {storage, filePath} = fd;
+  let fileName = filePath.split('/');
 
   // TODO: make cb(err, body)
   // var successCb = function() {
@@ -61,8 +39,8 @@ let fsRead = (fd, cb) => {
   // }
 
   let options = {
-      source : DOWNLOAD_INTERNAL_URL + fileName,
-      destination : LOCALHOST_URL + fileName
+      source : filePath,
+      destination : LOCALHOST_URL + fileName[fileName.length-1]
   }
   // storage.copyFile(successCb, failureCb, options);
   storage.copyFile(cb, cb, options);
@@ -74,8 +52,6 @@ let download = (opt) => {
 }
 
 module.exports = {
-  fsOpen: Rx.Observable.fromNodeCallback(fsOpen),
-  fsWrite: Rx.Observable.fromNodeCallback(fsWrite),
-  fsRead: Rx.Observable.fromNodeCallback(fsRead),
+  fsRead,
   download
 }
