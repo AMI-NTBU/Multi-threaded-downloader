@@ -53,7 +53,6 @@ function download (options) {
 
 class Download {
   constructor (options) {
-    console.log('Donwload constructor')
     if (ob === undefined) {
       throw new Error('Need to set ob library!');
     }
@@ -88,13 +87,11 @@ class Download {
   }
 
   start () {
-    console.log('start')
     let d = download(this.options);
     return d.toPromise();
   }
 
   startSingle() {
-    console.log('start')
     this.options.path = this.options.path.slice(0,-4); //remove .mtd
     return singleThreadDownload(this.options);
   }

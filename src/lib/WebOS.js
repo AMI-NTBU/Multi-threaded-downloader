@@ -3,16 +3,13 @@ import Rx from 'rx'
 const LOCALHOST_URL = 'http://127.0.0.1:9080/';
 
 let fsWrite = (opt, cb) => {
-  console.log('download file')
   let storage = new Storage();
 
   let successCb = () => {
-    console.log('dl success');
     cb(null, {storage: storage, filePath: opt.get('path')});
   }
 
   let failureCb = (cbObject) => {
-    console.log('dl failed');
     cb(cbObject);
   }
 
