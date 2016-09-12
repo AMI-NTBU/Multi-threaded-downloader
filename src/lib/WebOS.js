@@ -15,7 +15,8 @@ let fsWrite = (opt, cb) => {
 
   let options = {
     source : opt.get('url'),
-    destination : opt.get('path')
+    destination : opt.get('path'),
+    maxRedirection: 5
   };
   storage.copyFile(successCb, failureCb, options);
 }
